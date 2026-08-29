@@ -1,0 +1,62 @@
+[
+  {
+    "title": "Temporal: Durable Execution Overview",
+    "url": "https://example.test/temporal/durable-execution",
+    "snippet": "Durable execution replays a workflow's history to restore state after a crash. Workers are stateless; the event history in the datastore is the source of truth.",
+    "keywords": ["temporal", "durable", "execution", "workflow", "replay", "crash", "recovery"]
+  },
+  {
+    "title": "Idempotency Keys in Payment APIs",
+    "url": "https://example.test/stripe/idempotency",
+    "snippet": "An idempotency key lets a client safely retry a request. The server stores the key with the first response and returns that same response for any later request carrying the key.",
+    "keywords": ["idempotency", "key", "retry", "payment", "stripe", "duplicate", "safe"]
+  },
+  {
+    "title": "Leases and Fencing Tokens",
+    "url": "https://example.test/distributed/fencing",
+    "snippet": "A lease grants exclusive access for a bounded time. A fencing token is a monotonically increasing number attached to each lease, so a stalled holder's late write is rejected by the storage layer.",
+    "keywords": ["lease", "fencing", "token", "lock", "distributed", "zombie", "stale"]
+  },
+  {
+    "title": "Exponential Backoff and Jitter",
+    "url": "https://example.test/aws/backoff-jitter",
+    "snippet": "Full jitter picks a random delay between zero and the exponentially growing cap. Without jitter, clients that fail together retry together and recreate the overload.",
+    "keywords": ["backoff", "jitter", "retry", "exponential", "thundering", "herd", "overload"]
+  },
+  {
+    "title": "PostgreSQL SKIP LOCKED for Queues",
+    "url": "https://example.test/postgres/skip-locked",
+    "snippet": "SELECT FOR UPDATE SKIP LOCKED lets many workers pull disjoint rows from a queue table without blocking each other, making Postgres a workable job queue at moderate scale.",
+    "keywords": ["postgres", "postgresql", "queue", "skip", "locked", "worker", "job"]
+  },
+  {
+    "title": "Redis Streams Consumer Groups",
+    "url": "https://example.test/redis/streams",
+    "snippet": "Consumer groups distribute stream entries across consumers with at-least-once delivery. XAUTOCLAIM reassigns entries that a dead consumer accepted but never acknowledged.",
+    "keywords": ["redis", "streams", "consumer", "group", "xautoclaim", "xreadgroup", "queue"]
+  },
+  {
+    "title": "The Cost of Large Language Model Tokens",
+    "url": "https://example.test/llm/token-pricing",
+    "snippet": "Providers bill separately for input and output tokens, with output typically five times the input rate. Prompt caching can cut the cost of a repeated prefix by about ninety percent.",
+    "keywords": ["token", "pricing", "cost", "llm", "input", "output", "cache", "billing"]
+  },
+  {
+    "title": "Two-Phase Commit and Its Limits",
+    "url": "https://example.test/distributed/two-phase-commit",
+    "snippet": "Two-phase commit gives atomicity across participants but blocks when the coordinator fails. Most systems prefer idempotent retries over distributed transactions.",
+    "keywords": ["two", "phase", "commit", "2pc", "atomicity", "distributed", "transaction", "blocking"]
+  },
+  {
+    "title": "Speed of Light in Vacuum",
+    "url": "https://example.test/physics/speed-of-light",
+    "snippet": "The speed of light in vacuum is exactly 299792458 metres per second, a defined constant since the 1983 redefinition of the metre.",
+    "keywords": ["speed", "light", "physics", "constant", "vacuum", "metres", "second"]
+  },
+  {
+    "title": "Earth to Moon Distance",
+    "url": "https://example.test/astronomy/lunar-distance",
+    "snippet": "The mean distance from Earth to the Moon is about 384400 kilometres, varying between roughly 356500 km at perigee and 406700 km at apogee.",
+    "keywords": ["earth", "moon", "distance", "lunar", "astronomy", "kilometres", "perigee", "apogee"]
+  }
+]

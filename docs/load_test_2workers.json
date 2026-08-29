@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "generated_at": "2026-08-29 03:11 UTC",
+    "base_url": "http://localhost:8000",
+    "concurrency": 40,
+    "workers": "2 (concurrency 8 each)",
+    "queue": "postgres",
+    "provider": "fake",
+    "host": "win32, python 3.14.3",
+    "note": ""
+  },
+  "summary": {
+    "runs_requested": 200,
+    "submit_failures": 0,
+    "completed": 200,
+    "succeeded": 200,
+    "not_terminal": 0,
+    "wall_s": 18.330441099999007,
+    "runs_per_s": 10.910812178983017,
+    "steps_per_s": 65.46487307389809,
+    "total_steps": 1200,
+    "submit_p50_ms": 582.2440999909304,
+    "submit_p95_ms": 870.4752000048757,
+    "submit_p99_ms": 916.8800999759696,
+    "submit_mean_ms": 589.6092709999357,
+    "run_p50_s": 15.503346399986185,
+    "run_p95_s": 15.951342999993358,
+    "run_p99_s": 16.011920600023586,
+    "run_mean_s": 15.103343359499558,
+    "engine_p50_s": 14.705106,
+    "engine_p95_s": 15.199404,
+    "engine_p99_s": 15.217,
+    "total_cost_usd": 1.2
+  }
+}

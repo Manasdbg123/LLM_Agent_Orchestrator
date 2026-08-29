@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "generated_at": "2026-08-29 03:13 UTC",
+    "base_url": "http://localhost:8000",
+    "concurrency": 40,
+    "workers": "4 (concurrency 8 each)",
+    "queue": "postgres",
+    "provider": "fake",
+    "host": "win32, python 3.14.3",
+    "note": "**Horizontal scaling, and its limit here.** The identical workload against **2 workers** (`docs/load_test_2workers.json`) completed 200/200 runs in 18.33s: 10.91 runs/s, 65.5 steps/s, submit p95 870ms, run p95 15.95s. Doubling the fleet to 4 workers produced the table above \u2014 more throughput and lower run latency, but sublinearly, and submit latency got *worse*.\n\nThat is the honest shape of this result, and the reason is worth stating: everything here shares one local Postgres and a single uvicorn process on a laptop. On the `postgres` queue backend every worker polls the same table, so adding workers adds contention on the store that is also serving submissions \u2014 which is exactly what a rising submit p95 alongside a falling run p95 looks like. The engine is not worker-CPU-bound at this size; it is bound by the one Postgres underneath all of it. The `redis` backend replaces that poll with a push and would be the first thing to change before reading more into these numbers, followed by separating the API's connection pool from the workers'.\n\n**What the run does prove, and it is the important part:** across 400 runs in the two configurations, every run completed exactly 6 steps. Duplicate execution under concurrency would show up immediately as a step count above 6, and it does not appear at any fleet size."
+  },
+  "summary": {
+    "runs_requested": 200,
+    "submit_failures": 0,
+    "completed": 200,
+    "succeeded": 200,
+    "not_terminal": 0,
+    "wall_s": 17.174404999997932,
+    "runs_per_s": 11.645236035834957,
+    "steps_per_s": 69.87141621500975,
+    "total_steps": 1200,
+    "submit_p50_ms": 776.2241000018548,
+    "submit_p95_ms": 2697.7740000002086,
+    "submit_p99_ms": 2956.184500013478,
+    "submit_mean_ms": 1153.2291350002924,
+    "run_p50_s": 13.451960800011875,
+    "run_p95_s": 14.088353900006041,
+    "run_p99_s": 14.536601900006644,
+    "run_mean_s": 12.930652943500318,
+    "engine_p50_s": 12.077597,
+    "engine_p95_s": 12.84707,
+    "engine_p99_s": 12.91559,
+    "total_cost_usd": 1.2
+  }
+}

@@ -1,0 +1,72 @@
+[project]
+name = "agent-orchestrator"
+version = "0.2.0"
+description = "Durable execution engine for LLM agents"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.0.30",
+    # psycopg3 rather than asyncpg: ships binary wheels for current CPython
+    # (asyncpg lags on new minors), first-class SQLAlchemy 2.0 async support.
+    "psycopg[binary,pool]>=3.2",
+    "alembic>=1.13",
+    "redis>=5.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "structlog>=24.1",
+    "httpx>=0.27",
+    "anthropic>=1.2",
+    "prometheus-client>=0.20",
+    "opentelemetry-sdk>=1.25",
+    "opentelemetry-exporter-otlp-proto-http>=1.25",
+    "jinja2>=3.1",
+    # HTML form posts from the dashboard (approve/reject).
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-timeout>=2.3",
+    # Process-tree aware kills: on Windows a venv's python.exe is a launcher that
+    # runs the real interpreter as a child, so Popen.pid is not the worker's pid.
+    "psutil>=5.9",
+    "ruff>=0.5",
+    "pyyaml>=6.0",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+timeout = 120
+markers = [
+    "integration: requires a live Postgres (and Redis for the redis backend)",
+    "chaos: kills processes / injects faults; requires live infra",
+]
+filterwarnings = ["error::DeprecationWarning:app.*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+# ASYNC109: these helpers deliberately take a `timeout` rather than requiring every
+# caller to wrap them in asyncio.timeout(); they are polling helpers, not awaits on a
+# single operation.
+ignore = ["ASYNC109"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true

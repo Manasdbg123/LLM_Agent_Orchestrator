@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set refresh = 5 %}
+{% block title %}Run {{ run.id }}{% endblock %}
+{% block content %}
+<p><a href="/ui">&larr; all runs</a></p>
+<h2>{{ run.task[:120] }}</h2>
+<div class="cards">
+  <div class="card"><div class="n"><span class="pill {{ run.status }}">{{ run.status }}</span></div><div class="k">Status</div></div>
+  <div class="card"><div class="n">{{ run.steps_used }}/{{ run.max_steps }}</div><div class="k">Steps used</div></div>
+  <div class="card"><div class="n">${{ '%.4f'|format(run.cost_usd) }}</div><div class="k">of ${{ '%.2f'|format(run.max_cost_usd) }}</div></div>
+  <div class="card"><div class="n">{{ run.input_tokens }}/{{ run.output_tokens }}</div><div class="k">Tokens in/out</div></div>
+</div>
+
+{% if run.error %}
+  <p class="failed"><strong>{{ run.error.get('code') }}</strong> &mdash; {{ run.error.get('message') }}</p>
+{% endif %}
+{% if run.output and run.output.get('answer') %}
+  <h2>Answer</h2>
+  <div class="card wrap">{{ run.output.get('answer') }}</div>
+{% endif %}
+
+<h2>Step timeline</h2>
+<div class="table-wrap">
+<table>
+  <tr><th>#</th><th>Kind</th><th>Status</th><th>Att</th><th>Rec</th><th>Duration</th><th>Cost</th><th>Detail</th></tr>
+  {% for step in steps %}
+  {% set ms = ((step.ended_at - step.started_at).total_seconds() * 1000)|round(0)|int if step.started_at and step.ended_at else None %}
+  <tr>
+    <td class="mono">{{ step.seq }}</td>
+    <td>{{ step.kind }}</td>
+    <td><span class="pill {{ step.status }}">{{ step.status }}</span></td>
+    <td class="mono{% if step.attempt > 1 %} awaiting_approval{% endif %}">{{ step.attempt }}</td>
+    <td class="mono{% if step.recoveries %} failed{% endif %}">{{ step.recoveries }}</td>
+    <td class="mono">
+      {% if ms is not none %}
+        {{ ms }} ms
+        <div class="bar" style="width: {{ (ms / (longest * 1000) * 100)|round(1) }}%"></div>
+      {% else %}<span class="muted">&mdash;</span>{% endif %}
+    </td>
+    <td class="mono">
+      {% set call = cost_by_step.get(step.id) %}
+      {% if call %}${{ '%.5f'|format(call.cost_usd) }}{% else %}<span class="muted">&mdash;</span>{% endif %}
+    </td>
+    <td class="wrap muted">
+      {% set tc = tool_calls.get(step.id) %}
+      {% if tc %}<code>{{ tc.tool_name }}</code> <span class="pill {{ tc.effect_status }}">{{ tc.effect_status }}</span>
+        {{ (tc.result or {}).get('content', '')[:70] }}
+      {% elif step.error %}<span class="failed">{{ step.error.get('code') }}</span>
+      {% elif step.output and step.output.get('text') %}{{ step.output.get('text')[:70] }}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+
+<h2>Audit log</h2>
+<div class="table-wrap">
+<table>
+  <tr><th>Entity</th><th>Transition</th><th>Reason</th><th>Actor</th><th>At</th></tr>
+  {% for t in transitions %}
+  <tr>
+    <td>{{ t.entity }}</td>
+    <td class="mono">{{ t.from_status or '-' }} &rarr; <span class="{{ t.to_status }}">{{ t.to_status }}</span></td>
+    <td class="{% if t.reason in ('lease_expired', 'retryable_error') %}awaiting_approval{% endif %}">{{ t.reason }}</td>
+    <td class="mono muted">{{ t.actor }}</td>
+    <td class="mono muted">{{ t.created_at.strftime('%H:%M:%S') }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

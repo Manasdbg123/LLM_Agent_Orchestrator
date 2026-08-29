@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Agent Orchestrator{% endblock %}</title>
+  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}">{% endif %}
+  <style>
+    :root {
+      --bg: #0f1117; --panel: #171a21; --line: #262b36; --text: #e6e9ef;
+      --muted: #8b93a7; --ok: #46d18b; --warn: #e0a44b; --bad: #e2606b;
+      --info: #6aa3f0; --accent: #a78bfa;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7f8fa; --panel: #ffffff; --line: #e2e5eb; --text: #1a1d24;
+        --muted: #666e80; --ok: #17915a; --warn: #a86b12; --bad: #c0303c;
+        --info: #2b6cb0; --accent: #7c5cd6;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header {
+      display: flex; gap: 1.5rem; align-items: baseline;
+      padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--panel);
+    }
+    header h1 { font-size: 1rem; margin: 0; letter-spacing: -0.01em; }
+    header a { color: var(--muted); text-decoration: none; }
+    header a:hover, header a.active { color: var(--text); }
+    main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+    h2 { font-size: 0.95rem; margin: 1.75rem 0 0.65rem; letter-spacing: -0.01em; }
+    h2:first-child { margin-top: 0; }
+    .cards { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+      padding: 0.7rem 1rem; min-width: 8.5rem;
+    }
+    .card .n { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+    .card .k { color: var(--muted); font-size: 0.78rem; text-transform: uppercase;
+               letter-spacing: 0.04em; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel);
+            border: 1px solid var(--line); border-radius: 8px; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line);
+             white-space: nowrap; }
+    th { color: var(--muted); font-weight: 500; font-size: 0.78rem;
+         text-transform: uppercase; letter-spacing: 0.04em; }
+    tr:last-child td { border-bottom: none; }
+    td.wrap { white-space: normal; max-width: 34rem; }
+    a { color: var(--info); }
+    code, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+                  font-size: 0.85em; }
+    .pill { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px;
+            font-size: 0.75rem; border: 1px solid currentColor; }
+    .succeeded, .approved, .committed { color: var(--ok); }
+    .failed, .rejected, .expired, .cancelled { color: var(--bad); }
+    .running, .pending, .retrying, .in_flight { color: var(--info); }
+    .awaiting_approval { color: var(--warn); }
+    .muted { color: var(--muted); }
+    .bar { height: 6px; border-radius: 3px; background: var(--accent); min-width: 2px; }
+    form.inline { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    input[type=text] { background: var(--bg); color: var(--text);
+                       border: 1px solid var(--line); border-radius: 5px;
+                       padding: 0.3rem 0.5rem; }
+    button { border: 1px solid var(--line); border-radius: 5px; padding: 0.3rem 0.8rem;
+             cursor: pointer; background: var(--bg); color: var(--text); }
+    button.approve { border-color: var(--ok); color: var(--ok); }
+    button.reject { border-color: var(--bad); color: var(--bad); }
+    .empty { color: var(--muted); padding: 1.25rem; text-align: center;
+             border: 1px dashed var(--line); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agent Orchestrator</h1>
+    <nav style="display:flex; gap:1rem">
+      <a href="/ui">Runs</a>
+      <a href="/ui/approvals">Approvals</a>
+      <a href="/docs">API</a>
+      <a href="/metrics">Metrics</a>
+    </nav>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

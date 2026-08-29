@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% set refresh = 5 %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="card"><div class="n">{{ counts.get('running', 0) }}</div><div class="k">Running</div></div>
+  <div class="card"><div class="n">{{ counts.get('awaiting_approval', 0) }}</div><div class="k">Awaiting approval</div></div>
+  <div class="card"><div class="n">{{ counts.get('succeeded', 0) }}</div><div class="k">Succeeded</div></div>
+  <div class="card"><div class="n">{{ counts.get('failed', 0) }}</div><div class="k">Failed</div></div>
+  <div class="card"><div class="n">${{ '%.4f'|format(total_cost) }}</div><div class="k">Total cost</div></div>
+</div>
+
+{% if pending_approvals %}
+  <p><a href="/ui/approvals"><strong>{{ pending_approvals }}</strong> approval(s) waiting for a decision</a></p>
+{% endif %}
+
+<h2>Recent runs</h2>
+{% if not runs %}
+  <div class="empty">No runs yet. Create one with <code>POST /v1/runs</code>.</div>
+{% else %}
+<div class="table-wrap">
+<table>
+  <tr><th>Status</th><th>Task</th><th>Steps</th><th>Tokens</th><th>Cost</th><th>Created</th><th></th></tr>
+  {% for run in runs %}
+  <tr>
+    <td><span class="pill {{ run.status }}">{{ run.status }}</span></td>
+    <td class="wrap">{{ run.task[:90] }}{% if run.task|length > 90 %}...{% endif %}</td>
+    <td class="mono">{{ run.steps_used }}/{{ run.max_steps }}</td>
+    <td class="mono">{{ run.input_tokens + run.output_tokens }}</td>
+    <td class="mono">${{ '%.4f'|format(run.cost_usd) }}</td>
+    <td class="muted mono">{{ run.created_at.strftime('%H:%M:%S') }}</td>
+    <td><a href="/ui/runs/{{ run.id }}">detail</a></td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+# Minimal collector: accept OTLP over HTTP, log a summary, and expose a place to
+# plug a real backend. `debug` is the default exporter so the stack is useful with
+# no external service; swap in otlp/tempo or jaeger when you have one.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 2s
+
+exporters:
+  debug:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

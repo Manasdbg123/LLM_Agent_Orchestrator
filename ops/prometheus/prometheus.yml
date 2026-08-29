@@ -1,0 +1,23 @@
+# Scrape config for the orchestrator.
+#
+# Only the API is scraped for state gauges (runs in progress, queue depth): it is the
+# single process that refreshes them from Postgres. Workers are scraped for their own
+# counters and histograms, which Prometheus sums across instances - correct for
+# "how many steps failed", which is why the two kinds of metric are collected
+# differently in app/obs/metrics.py.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: agentorc-api
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          component: api
+
+  - job_name: agentorc-workers
+    static_configs:
+      - targets: ["worker:9100"]
+        labels:
+          component: worker

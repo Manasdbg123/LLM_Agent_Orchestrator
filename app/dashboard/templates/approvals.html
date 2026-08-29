@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% set refresh = 5 %}
+{% block title %}Approvals{% endblock %}
+{% block content %}
+<h2>Waiting for a decision</h2>
+{% if not pending %}
+  <div class="empty">Nothing is waiting. Runs proceed without you.</div>
+{% else %}
+<div class="table-wrap">
+<table>
+  <tr><th>Tool</th><th>Why</th><th>Arguments</th><th>Waiting since</th><th>Decision</th></tr>
+  {% for a in pending %}
+  <tr>
+    <td><code>{{ a.tool_name }}</code></td>
+    <td class="wrap awaiting_approval">{{ a.reason }}</td>
+    <td class="wrap mono muted">{{ a.arguments }}</td>
+    <td class="mono muted">{{ a.requested_at.strftime('%H:%M:%S') }}</td>
+    <td>
+      <form class="inline" method="post" action="/ui/approvals/{{ a.id }}/decide">
+        <input type="text" name="decided_by" placeholder="your name" value="dashboard">
+        <input type="text" name="reason" placeholder="reason (optional)">
+        <button class="approve" type="submit" name="decision" value="approve">Approve</button>
+        <button class="reject" type="submit" name="decision" value="reject">Reject</button>
+      </form>
+      <div class="muted" style="font-size:0.78rem; margin-top:0.3rem">
+        run <a href="/ui/runs/{{ a.run_id }}">{{ a.run_id.hex[:8] }}</a>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endif %}
+
+<h2>Recently decided</h2>
+{% if not recent %}
+  <div class="empty">No decisions yet.</div>
+{% else %}
+<div class="table-wrap">
+<table>
+  <tr><th>Tool</th><th>Decision</th><th>By</th><th>Reason</th><th>At</th></tr>
+  {% for a in recent %}
+  <tr>
+    <td><code>{{ a.tool_name }}</code></td>
+    <td><span class="pill {{ a.decision }}">{{ a.decision }}</span></td>
+    <td class="mono">{{ a.decided_by or '-' }}</td>
+    <td class="wrap muted">{{ a.decision_reason or '' }}</td>
+    <td class="mono muted">{{ a.decided_at.strftime('%H:%M:%S') if a.decided_at else '' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endif %}
+{% endblock %}
