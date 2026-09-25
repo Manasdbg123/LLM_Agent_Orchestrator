@@ -21,6 +21,7 @@ the model can usually fix by itself in one turn.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from typing import Any
 
 import sqlalchemy as sa
@@ -220,10 +221,10 @@ async def _next_sibling_tool_use(ctx: StepContext) -> dict[str, Any] | None:
         return None
 
     async with session_scope() as session:
-        parent_output = (
+        parent_output: dict[str, Any] | None = (
             await session.execute(sa.select(Step.output).where(Step.id == parent_id))
         ).scalar_one_or_none()
-        sibling_outputs = (
+        sibling_outputs: Sequence[dict[str, Any] | None] = (
             (
                 await session.execute(
                     sa.select(Step.output).where(

@@ -1,5 +1,7 @@
 # Agent Orchestration Engine
 
+[![CI](https://github.com/Manasdbg123/LLM_Agent_Orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Manasdbg123/LLM_Agent_Orchestrator/actions/workflows/ci.yml)
+
 A durable execution engine for LLM agents. Submit a task; the engine runs a
 ReAct-style loop where **every state transition is committed to Postgres before it is
 acted on**. Workers are stateless and disposable — kill one mid-step and another
@@ -129,6 +131,24 @@ curl -X POST localhost:8000/v1/approvals/<id>/decision \
 Rejecting does not kill the run: the refusal comes back to the model as an errored
 tool result so it can choose another course. Set the agent's `on_approval_rejected`
 to `fail_run` if you want a rejection to be terminal.
+
+---
+
+## The dashboard
+
+`make api` serves an operator dashboard at **http://localhost:8000/ui** — server-rendered,
+no build step, light and dark themes.
+
+| Page | What you can do |
+|---|---|
+| **Runs** (`/ui`) | See running / awaiting / succeeded / failed counts and total spend; filter by status; search task text; **start a run** with an optional step and budget cap |
+| **Run detail** (`/ui/runs/{id}`) | Step and budget meters, the answer or failure code, a step timeline with durations, per-step cost, retries and lease recoveries, the full audit log; **cancel** a live run |
+| **Approvals** (`/ui/approvals`) | Review a paused tool call's arguments and **approve or reject** it, with a reason the model sees on rejection |
+
+Every action goes through the same core service call as its API endpoint, so the
+dashboard cannot disagree with the API. Pages refresh themselves every three seconds
+(toggle **Live** in the header) by swapping the page body in place, and pause while you
+are typing in a form; a finished run stops refreshing.
 
 ---
 
@@ -322,6 +342,10 @@ pytest -m integration                # real Postgres
 pytest -m chaos                      # kills processes, expires leases, injects faults
 pytest                               # everything
 ```
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs ruff and mypy, then
+the unit and integration suites against real Postgres 16 and Redis 7 service
+containers, then the 17-task evaluation suite, on every pull request.
 
 Current status on a machine with Postgres but no Redis: **194 passed, 15 skipped**
 (every skip is a Redis-backed test parameter). Most integration and chaos tests are

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e '.[dev]'
+      - run: ruff check app tests scripts eval
+      - run: mypy app eval
+
+  test:
+    name: Unit and integration tests
+    runs-on: ubuntu-latest
+    # The integration suite runs against real Postgres and Redis on purpose:
+    # SELECT ... FOR UPDATE, partial unique indexes and atomic conditional
+    # UPDATEs are the mechanism under test, not a detail to mock away.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: orch
+          POSTGRES_PASSWORD: orch
+          POSTGRES_DB: orch_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U orch"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      AGENTORC_TEST_DATABASE_URL: postgresql+psycopg://orch:orch@localhost:5432/orch_test
+      AGENTORC_REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e '.[dev]'
+      - name: Unit tests
+        run: pytest tests/unit -q
+      - name: Integration tests
+        run: pytest tests/integration -q -rs
+      - name: Evaluation suite
+        # 17 tasks graded against database ground truth, on the scripted provider.
+        run: python -m eval --no-write
+        env:
+          AGENTORC_DATABASE_URL: postgresql+psycopg://orch:orch@localhost:5432/orch_test
+          AGENTORC_QUEUE_BACKEND: postgres

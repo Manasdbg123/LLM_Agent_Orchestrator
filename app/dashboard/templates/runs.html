@@ -1,38 +1,120 @@
 {% extends "base.html" %}
-{% set refresh = 5 %}
 {% block title %}Runs{% endblock %}
+{% block style %}
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-head p { color: var(--text-2); margin-top: 2px; }
+  .new-run { display: grid; grid-template-columns: 1fr 120px 140px auto; gap: 12px; align-items: end; }
+  .new-run .task-field { grid-column: 1 / -1; }
+  .new-run .hint { font-size: 12.5px; color: var(--muted); align-self: center; }
+  .filters { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .search { display: flex; gap: 8px; min-width: 240px; }
+  .run-id { font: 500 12px var(--mono); color: var(--muted); }
+  @media (max-width: 720px) { .new-run { grid-template-columns: 1fr 1fr; } .new-run .btn { grid-column: 1 / -1; } .new-run .hint { grid-column: 1 / -1; } }
+{% endblock %}
 {% block content %}
-<div class="cards">
-  <div class="card"><div class="n">{{ counts.get('running', 0) }}</div><div class="k">Running</div></div>
-  <div class="card"><div class="n">{{ counts.get('awaiting_approval', 0) }}</div><div class="k">Awaiting approval</div></div>
-  <div class="card"><div class="n">{{ counts.get('succeeded', 0) }}</div><div class="k">Succeeded</div></div>
-  <div class="card"><div class="n">{{ counts.get('failed', 0) }}</div><div class="k">Failed</div></div>
-  <div class="card"><div class="n">${{ '%.4f'|format(total_cost) }}</div><div class="k">Total cost</div></div>
+<div class="page-head">
+  <div>
+    <h1>Runs</h1>
+    <p>Every agent run, its budget, and where it is now.</p>
+  </div>
+</div>
+
+<div class="stats">
+  <a class="panel stat running" href="/ui?status=running"><span class="n">{{ counts.get('running', 0) }}</span><span class="k">Running</span></a>
+  <a class="panel stat awaiting" href="/ui/approvals"><span class="n">{{ counts.get('awaiting_approval', 0) }}</span><span class="k">Awaiting approval</span></a>
+  <a class="panel stat ok" href="/ui?status=succeeded"><span class="n">{{ counts.get('succeeded', 0) }}</span><span class="k">Succeeded</span></a>
+  <a class="panel stat bad" href="/ui?status=failed"><span class="n">{{ counts.get('failed', 0) }}</span><span class="k">Failed</span></a>
+  <div class="panel stat cost"><span class="n">${{ '%.4f'|format(total_cost) }}</span><span class="k">Total spend</span></div>
 </div>
 
 {% if pending_approvals %}
-  <p><a href="/ui/approvals"><strong>{{ pending_approvals }}</strong> approval(s) waiting for a decision</a></p>
+  <div class="notice">
+    <span class="pill awaiting_approval">{{ pending_approvals }} waiting</span>
+    <span>{{ 'A tool call needs' if pending_approvals == 1 else 'Tool calls need' }} your decision before {{ 'its run' if pending_approvals == 1 else 'their runs' }} can continue.</span>
+    <a href="/ui/approvals">Review approvals →</a>
+  </div>
 {% endif %}
 
-<h2>Recent runs</h2>
-{% if not runs %}
-  <div class="empty">No runs yet. Create one with <code>POST /v1/runs</code>.</div>
-{% else %}
-<div class="table-wrap">
-<table>
-  <tr><th>Status</th><th>Task</th><th>Steps</th><th>Tokens</th><th>Cost</th><th>Created</th><th></th></tr>
-  {% for run in runs %}
-  <tr>
-    <td><span class="pill {{ run.status }}">{{ run.status }}</span></td>
-    <td class="wrap">{{ run.task[:90] }}{% if run.task|length > 90 %}...{% endif %}</td>
-    <td class="mono">{{ run.steps_used }}/{{ run.max_steps }}</td>
-    <td class="mono">{{ run.input_tokens + run.output_tokens }}</td>
-    <td class="mono">${{ '%.4f'|format(run.cost_usd) }}</td>
-    <td class="muted mono">{{ run.created_at.strftime('%H:%M:%S') }}</td>
-    <td><a href="/ui/runs/{{ run.id }}">detail</a></td>
-  </tr>
-  {% endfor %}
-</table>
-</div>
-{% endif %}
+<section class="panel panel-pad" aria-labelledby="new-run-title">
+  <div class="section-head"><h2 id="new-run-title">Start a run</h2></div>
+  <form class="new-run" method="post" action="/ui/runs">
+    <label class="field task-field">Task
+      <textarea class="input" name="task" id="new-task" rows="2" required maxlength="10000"
+        placeholder="e.g. What is 17% of 2,340? Then email the answer to ops@example.com"></textarea>
+    </label>
+    <label class="field">Max steps
+      <input class="input num" type="number" name="max_steps" id="new-max-steps" min="1" max="200" placeholder="default">
+    </label>
+    <label class="field">Budget (USD)
+      <input class="input num" type="number" name="max_cost_usd" id="new-max-cost" min="0.01" step="0.01" placeholder="default">
+    </label>
+    <button class="btn btn-primary" type="submit">Start run</button>
+    <span class="hint">Model <code>{{ default_model }}</code> · tools {% for t in tools %}<code>{{ t }}</code>{{ ', ' if not loop.last }}{% endfor %}. Risky tool calls pause for approval.</span>
+  </form>
+</section>
+
+<section>
+  <div class="filters">
+    <div class="chips" role="navigation" aria-label="Filter by status">
+      <a class="chip {{ 'active' if not status_filter }}" href="/ui{{ '?q=' ~ q|urlencode if q }}">All<span class="num">{{ total_runs }}</span></a>
+      {% for s in status_filters %}
+        <a class="chip {{ 'active' if status_filter == s }}" href="/ui?status={{ s }}{{ '&q=' ~ q|urlencode if q }}">{{ s.replace('_', ' ')|capitalize }}<span class="num">{{ counts.get(s, 0) }}</span></a>
+      {% endfor %}
+    </div>
+    <form class="search" method="get" action="/ui" role="search">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <input class="input" type="search" name="q" id="run-search" value="{{ q }}" placeholder="Search tasks" aria-label="Search tasks">
+    </form>
+  </div>
+
+  <h2 class="hide-sm" style="margin-bottom:10px">Recent runs</h2>
+  {% if not runs %}
+    <div class="empty">
+      {% if status_filter or q %}
+        <strong>No runs match this filter</strong>
+        <a href="/ui">Show all runs</a>
+      {% else %}
+        <strong>No runs yet</strong>
+        Start one above, or <code>POST /v1/runs</code> from the API.
+      {% endif %}
+    </div>
+  {% else %}
+  <div class="panel">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Status</th><th>Task</th><th>Steps</th><th>Cost</th><th class="hide-sm">Tokens</th><th>Created</th></tr>
+        </thead>
+        <tbody>
+          {% for run in runs %}
+          {% set step_pct = pct(run.steps_used, run.max_steps) %}
+          {% set cost_pct = pct(run.cost_usd, run.max_cost_usd) %}
+          <tr data-href="/ui/runs/{{ run.id }}">
+            <td class="nowrap"><span class="pill {{ run.status }}">{{ run.status.replace('_', ' ') }}</span></td>
+            <td class="task">
+              <a href="/ui/runs/{{ run.id }}">{{ run.task|task_text }}</a>
+              <span class="run-id">{{ run.id.hex[-8:] }}</span>
+            </td>
+            <td>
+              <div class="meter-row">
+                <span class="num">{{ run.steps_used }}/{{ run.max_steps }}</span>
+                <div class="meter {{ 'bad' if step_pct >= 100 else 'warn' if step_pct >= 75 }}"><span style="width: {{ step_pct }}%"></span></div>
+              </div>
+            </td>
+            <td>
+              <div class="meter-row">
+                <span class="num">${{ '%.4f'|format(run.cost_usd) }}</span>
+                <div class="meter {{ 'bad' if cost_pct >= 100 else 'warn' if cost_pct >= 75 }}"><span style="width: {{ cost_pct }}%"></span></div>
+              </div>
+            </td>
+            <td class="num hide-sm">{{ '{:,}'.format(run.input_tokens + run.output_tokens) }}</td>
+            <td class="nowrap muted" title="{{ run.created_at.isoformat() }}">{{ run.created_at|ago }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}
