@@ -1,72 +1,179 @@
 {% extends "base.html" %}
-{% set refresh = 5 %}
-{% block title %}Run {{ run.id }}{% endblock %}
+{% block title %}Run {{ run.id.hex[-8:] }}{% endblock %}
+{% block style %}
+  .crumbs { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .run-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .run-head h1 { max-width: 80ch; }
+  .run-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; color: var(--muted); font-size: 13px; }
+  .answer { padding: 18px 20px; border-left: 3px solid var(--ok); line-height: 1.65; }
+  .answer-text { white-space: pre-wrap; }
+  .answer h2 { margin-bottom: 6px; }
+  .failure { padding: 16px 20px; border-left: 3px solid var(--bad); background: var(--bad-soft); }
+  .failure code { font-weight: 600; color: var(--bad); }
+
+  .timeline { list-style: none; padding: 0; }
+  .step { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--line); align-items: start; }
+  .step:last-child { border-bottom: 0; }
+  .step-icon { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--panel-2); color: var(--text-2); position: relative; }
+  .step-icon.agent_turn { background: var(--info-soft); color: var(--info); }
+  .step-icon.tool_call { background: var(--accent-soft); color: var(--accent-text); }
+  .step-icon.finalize { background: var(--ok-soft); color: var(--ok); }
+  .step-title { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 600; }
+  .step-seq { font: 500 12px var(--mono); color: var(--muted); }
+  .step-detail { margin-top: 4px; color: var(--text-2); font-size: 13.5px; overflow-wrap: anywhere; }
+  .step-detail .err { color: var(--bad); font-weight: 600; }
+  .step-flags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .flag { font: 600 11.5px var(--mono); padding: 1px 7px; border-radius: 6px; background: var(--warn-soft); color: var(--warn); }
+  .flag.bad { background: var(--bad-soft); color: var(--bad); }
+  .step-side { text-align: right; display: grid; gap: 4px; justify-items: end; min-width: 120px; }
+  .dur-bar { width: 120px; height: 4px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
+  .dur-bar > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+
+  .audit td, .audit th { padding: 8px 14px; font-size: 13px; }
+  @media (max-width: 720px) { .step { grid-template-columns: 30px minmax(0, 1fr); } .step-side { grid-column: 2; justify-items: start; text-align: left; } }
+{% endblock %}
 {% block content %}
-<p><a href="/ui">&larr; all runs</a></p>
-<h2>{{ run.task[:120] }}</h2>
-<div class="cards">
-  <div class="card"><div class="n"><span class="pill {{ run.status }}">{{ run.status }}</span></div><div class="k">Status</div></div>
-  <div class="card"><div class="n">{{ run.steps_used }}/{{ run.max_steps }}</div><div class="k">Steps used</div></div>
-  <div class="card"><div class="n">${{ '%.4f'|format(run.cost_usd) }}</div><div class="k">of ${{ '%.2f'|format(run.max_cost_usd) }}</div></div>
-  <div class="card"><div class="n">{{ run.input_tokens }}/{{ run.output_tokens }}</div><div class="k">Tokens in/out</div></div>
+<div>
+  <div class="crumbs"><a href="/ui">Runs</a><span>/</span><span class="mono">{{ run.id }}</span></div>
 </div>
+
+<div class="run-head">
+  <div>
+    <h1>{{ run.task|task_text }}</h1>
+    <div class="run-meta">
+      <span class="pill {{ run.status }}">{{ run.status.replace('_', ' ') }}</span>
+      {% if run.cancel_requested and not terminal %}<span class="pill cancelled">cancel requested</span>{% endif %}
+      <span>Created {{ run.created_at|ago }}</span>
+      {% if run.started_at %}<span>· ran {{ duration(run.started_at, run.ended_at) }}</span>{% endif %}
+    </div>
+  </div>
+  {% if not terminal and not run.cancel_requested %}
+  <form method="post" action="/ui/runs/{{ run.id }}/cancel">
+    <button class="btn btn-bad" type="submit">Cancel run</button>
+  </form>
+  {% endif %}
+</div>
+
+{% set step_pct = pct(run.steps_used, run.max_steps) %}
+{% set cost_pct = pct(run.cost_usd, run.max_cost_usd) %}
+<div class="stats">
+  <div class="panel stat running">
+    <span class="n">{{ run.steps_used }}<span class="muted" style="font-size:15px">/{{ run.max_steps }}</span></span>
+    <span class="k">Steps used</span>
+    <div class="meter {{ 'bad' if step_pct >= 100 else 'warn' if step_pct >= 75 }}"><span style="width: {{ step_pct }}%"></span></div>
+  </div>
+  <div class="panel stat cost">
+    <span class="n">${{ '%.4f'|format(run.cost_usd) }}</span>
+    <span class="k">of ${{ '%.2f'|format(run.max_cost_usd) }} budget</span>
+    <div class="meter {{ 'bad' if cost_pct >= 100 else 'warn' if cost_pct >= 75 }}"><span style="width: {{ cost_pct }}%"></span></div>
+  </div>
+  <div class="panel stat">
+    <span class="n">{{ '{:,}'.format(run.input_tokens) }}<span class="muted" style="font-size:15px"> / {{ '{:,}'.format(run.output_tokens) }}</span></span>
+    <span class="k">Tokens in / out</span>
+  </div>
+  <div class="panel stat {{ 'ok' if run.status == 'succeeded' else 'bad' if run.status in ('failed', 'cancelled') else 'awaiting' }}">
+    <span class="n" style="font-size:18px">{{ duration(run.started_at, run.ended_at) or '—' }}</span>
+    <span class="k">Wall clock</span>
+  </div>
+</div>
+
+{% if run.status == 'awaiting_approval' %}
+  <div class="notice"><span class="pill awaiting_approval">paused</span> A tool call is waiting for your decision. <a href="/ui/approvals">Open approvals →</a></div>
+{% endif %}
 
 {% if run.error %}
-  <p class="failed"><strong>{{ run.error.get('code') }}</strong> &mdash; {{ run.error.get('message') }}</p>
+  <div class="panel failure">
+    <h2 style="margin-bottom:4px"><code>{{ run.error.get('code') }}</code></h2>
+    <div>{{ run.error.get('message') }}</div>
+  </div>
 {% endif %}
+
 {% if run.output and run.output.get('answer') %}
-  <h2>Answer</h2>
-  <div class="card wrap">{{ run.output.get('answer') }}</div>
+  <div class="panel answer">
+    <h2>Answer</h2>
+    <div class="answer-text">{{ run.output.get('answer') }}</div>
+  </div>
 {% endif %}
 
-<h2>Step timeline</h2>
-<div class="table-wrap">
-<table>
-  <tr><th>#</th><th>Kind</th><th>Status</th><th>Att</th><th>Rec</th><th>Duration</th><th>Cost</th><th>Detail</th></tr>
-  {% for step in steps %}
-  {% set ms = ((step.ended_at - step.started_at).total_seconds() * 1000)|round(0)|int if step.started_at and step.ended_at else None %}
-  <tr>
-    <td class="mono">{{ step.seq }}</td>
-    <td>{{ step.kind }}</td>
-    <td><span class="pill {{ step.status }}">{{ step.status }}</span></td>
-    <td class="mono{% if step.attempt > 1 %} awaiting_approval{% endif %}">{{ step.attempt }}</td>
-    <td class="mono{% if step.recoveries %} failed{% endif %}">{{ step.recoveries }}</td>
-    <td class="mono">
-      {% if ms is not none %}
-        {{ ms }} ms
-        <div class="bar" style="width: {{ (ms / (longest * 1000) * 100)|round(1) }}%"></div>
-      {% else %}<span class="muted">&mdash;</span>{% endif %}
-    </td>
-    <td class="mono">
-      {% set call = cost_by_step.get(step.id) %}
-      {% if call %}${{ '%.5f'|format(call.cost_usd) }}{% else %}<span class="muted">&mdash;</span>{% endif %}
-    </td>
-    <td class="wrap muted">
-      {% set tc = tool_calls.get(step.id) %}
-      {% if tc %}<code>{{ tc.tool_name }}</code> <span class="pill {{ tc.effect_status }}">{{ tc.effect_status }}</span>
-        {{ (tc.result or {}).get('content', '')[:70] }}
-      {% elif step.error %}<span class="failed">{{ step.error.get('code') }}</span>
-      {% elif step.output and step.output.get('text') %}{{ step.output.get('text')[:70] }}
-      {% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
-</div>
+<section>
+  <div class="section-head"><h2>Step timeline</h2><span class="muted">{{ steps|length }} step{{ 's' if steps|length != 1 }}</span></div>
+  {% if not steps %}
+    <div class="empty"><strong>No steps yet</strong>The first step is queued.</div>
+  {% else %}
+  <ol class="panel timeline">
+    {% for step in steps %}
+    {% set ms = ((step.ended_at - step.started_at).total_seconds() * 1000)|round(0)|int if step.started_at and step.ended_at else None %}
+    {% set tc = tool_calls.get(step.id) %}
+    {% set call = cost_by_step.get(step.id) %}
+    <li class="step">
+      <span class="step-icon {{ step.kind }}" aria-hidden="true">
+        {% if step.kind == 'agent_turn' %}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        {% elif step.kind == 'tool_call' %}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        {% elif step.kind == 'finalize' %}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        {% else %}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/></svg>
+        {% endif %}
+      </span>
+      <div>
+        <div class="step-title">
+          <span class="step-seq">#{{ step.seq }}</span>
+          <span>{{ step.kind }}</span>
+          {% if tc %}<code>{{ tc.tool_name }}</code>{% endif %}
+          <span class="pill {{ step.status }}">{{ step.status }}</span>
+          {% if tc %}<span class="pill {{ tc.effect_status }}">effect {{ tc.effect_status }}</span>{% endif %}
+        </div>
+        <div class="step-detail">
+          {% if step.error %}<span class="err">{{ step.error.get('code') }}</span> {{ step.error.get('message', '')[:160] }}
+          {% elif tc %}{{ (tc.result or {}).get('content', '')[:160] }}
+          {% elif step.output and step.output.get('text') %}{{ step.output.get('text')[:160] }}
+          {% endif %}
+        </div>
+        {% if step.attempt > 1 or step.recoveries %}
+        <div class="step-flags">
+          {% if step.attempt > 1 %}<span class="flag" title="Retried after a retryable error">attempt {{ step.attempt }}/{{ step.max_attempts }}</span>{% endif %}
+          {% if step.recoveries %}<span class="flag bad" title="Reclaimed from a worker whose lease expired">recovered ×{{ step.recoveries }}</span>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="step-side">
+        {% if ms is not none %}
+          <span class="num">{{ '{:,}'.format(ms) }} ms</span>
+          <div class="dur-bar"><span style="width: {{ (ms / (longest * 1000) * 100)|round(1) }}%"></span></div>
+        {% elif step.started_at %}
+          <span class="muted">running…</span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+        {% if call %}<span class="num muted">${{ '%.5f'|format(call.cost_usd) }}</span>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+</section>
 
-<h2>Audit log</h2>
-<div class="table-wrap">
-<table>
-  <tr><th>Entity</th><th>Transition</th><th>Reason</th><th>Actor</th><th>At</th></tr>
-  {% for t in transitions %}
-  <tr>
-    <td>{{ t.entity }}</td>
-    <td class="mono">{{ t.from_status or '-' }} &rarr; <span class="{{ t.to_status }}">{{ t.to_status }}</span></td>
-    <td class="{% if t.reason in ('lease_expired', 'retryable_error') %}awaiting_approval{% endif %}">{{ t.reason }}</td>
-    <td class="mono muted">{{ t.actor }}</td>
-    <td class="mono muted">{{ t.created_at.strftime('%H:%M:%S') }}</td>
-  </tr>
-  {% endfor %}
-</table>
-</div>
+<section>
+  <details id="audit-log" class="panel">
+    <summary class="panel-pad">Audit log <span class="muted" style="font-weight:400">{{ transitions|length }} transitions</span></summary>
+    <div class="table-wrap">
+      <table class="audit">
+        <thead><tr><th>Entity</th><th>Transition</th><th>Reason</th><th>Actor</th><th>At</th></tr></thead>
+        <tbody>
+          {% for t in transitions %}
+          <tr>
+            <td>{{ t.entity }}</td>
+            <td class="nowrap mono">{{ t.from_status or '·' }} → <span class="pill {{ t.to_status }}">{{ t.to_status }}</span></td>
+            <td>{% if t.reason in ('lease_expired', 'retryable_error') %}<span class="flag">{{ t.reason }}</span>{% else %}{{ t.reason }}{% endif %}</td>
+            <td class="mono muted">{{ t.actor }}</td>
+            <td class="mono muted nowrap">{{ t.created_at.strftime('%H:%M:%S.%f')[:-3] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
 {% endblock %}

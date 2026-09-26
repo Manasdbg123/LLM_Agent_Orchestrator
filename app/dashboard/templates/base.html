@@ -2,86 +2,246 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>{% block title %}Agent Orchestrator{% endblock %}</title>
-  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}">{% endif %}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Runs{% endblock %} · Orchestrator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M7 16h4l3-7 4 14 3-7h4' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    try { const t = localStorage.getItem('orch-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <style>
     :root {
-      --bg: #0f1117; --panel: #171a21; --line: #262b36; --text: #e6e9ef;
-      --muted: #8b93a7; --ok: #46d18b; --warn: #e0a44b; --bad: #e2606b;
-      --info: #6aa3f0; --accent: #a78bfa;
+      --bg: #f4f6f8; --panel: #ffffff; --panel-2: #f0f3f6; --line: #dfe4ea; --line-2: #c9d1da;
+      --text: #111827; --text-2: #4b5563; --muted: #6b7280;
+      --accent: #0f766e; --accent-soft: #ddf3ef; --accent-text: #0b5c55; --on-accent: #ffffff;
+      --ok: #15803d; --ok-soft: #e3f5e8; --warn: #b45309; --warn-soft: #fdf1dd;
+      --bad: #be123c; --bad-soft: #fde6ea; --info: #1d4ed8; --info-soft: #e5edfd;
+      --idle: #6b7280; --idle-soft: #eef0f3;
+      --shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 4px 16px -8px rgba(15, 23, 42, .12);
+      --ring: 0 0 0 3px rgba(15, 118, 110, .25);
+      --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+      color-scheme: light;
     }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f7f8fa; --panel: #ffffff; --line: #e2e5eb; --text: #1a1d24;
-        --muted: #666e80; --ok: #17915a; --warn: #a86b12; --bad: #c0303c;
-        --info: #2b6cb0; --accent: #7c5cd6;
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0b1016; --panel: #111820; --panel-2: #17202a; --line: #232e3a; --line-2: #324151;
+        --text: #e6edf3; --text-2: #b4c0cc; --muted: #8392a2;
+        --accent: #2dd4bf; --accent-soft: #0f2e2b; --accent-text: #7ee8da; --on-accent: #04201d;
+        --ok: #4ade80; --ok-soft: #10281a; --warn: #fbbf24; --warn-soft: #2d2311;
+        --bad: #fb7185; --bad-soft: #321720; --info: #7aa7ff; --info-soft: #14213d;
+        --idle: #94a3b8; --idle-soft: #1b2430;
+        --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px -10px rgba(0,0,0,.6);
+        --ring: 0 0 0 3px rgba(45, 212, 191, .3);
+        color-scheme: dark;
       }
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    :root[data-theme="dark"] {
+      --bg: #0b1016; --panel: #111820; --panel-2: #17202a; --line: #232e3a; --line-2: #324151;
+      --text: #e6edf3; --text-2: #b4c0cc; --muted: #8392a2;
+      --accent: #2dd4bf; --accent-soft: #0f2e2b; --accent-text: #7ee8da; --on-accent: #04201d;
+      --ok: #4ade80; --ok-soft: #10281a; --warn: #fbbf24; --warn-soft: #2d2311;
+      --bad: #fb7185; --bad-soft: #321720; --info: #7aa7ff; --info-soft: #14213d;
+      --idle: #94a3b8; --idle-soft: #1b2430;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px -10px rgba(0,0,0,.6);
+      --ring: 0 0 0 3px rgba(45, 212, 191, .3);
+      color-scheme: dark;
     }
-    header {
-      display: flex; gap: 1.5rem; align-items: baseline;
-      padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--panel);
-    }
-    header h1 { font-size: 1rem; margin: 0; letter-spacing: -0.01em; }
-    header a { color: var(--muted); text-decoration: none; }
-    header a:hover, header a.active { color: var(--text); }
-    main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-    h2 { font-size: 0.95rem; margin: 1.75rem 0 0.65rem; letter-spacing: -0.01em; }
-    h2:first-child { margin-top: 0; }
-    .cards { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; }
-    .card {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-      padding: 0.7rem 1rem; min-width: 8.5rem;
-    }
-    .card .n { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
-    .card .k { color: var(--muted); font-size: 0.78rem; text-transform: uppercase;
-               letter-spacing: 0.04em; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; background: var(--panel);
-            border: 1px solid var(--line); border-radius: 8px; }
-    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line);
-             white-space: nowrap; }
-    th { color: var(--muted); font-weight: 500; font-size: 0.78rem;
-         text-transform: uppercase; letter-spacing: 0.04em; }
-    tr:last-child td { border-bottom: none; }
-    td.wrap { white-space: normal; max-width: 34rem; }
-    a { color: var(--info); }
-    code, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-                  font-size: 0.85em; }
-    .pill { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px;
-            font-size: 0.75rem; border: 1px solid currentColor; }
-    .succeeded, .approved, .committed { color: var(--ok); }
-    .failed, .rejected, .expired, .cancelled { color: var(--bad); }
-    .running, .pending, .retrying, .in_flight { color: var(--info); }
-    .awaiting_approval { color: var(--warn); }
+
+    * { box-sizing: border-box; margin: 0; }
+    body { background: var(--bg); color: var(--text); font: 14px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent-text); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: none; box-shadow: var(--ring); border-radius: 6px; }
+    code, .mono { font-family: var(--mono); font-size: .92em; }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
     .muted { color: var(--muted); }
-    .bar { height: 6px; border-radius: 3px; background: var(--accent); min-width: 2px; }
-    form.inline { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
-    input[type=text] { background: var(--bg); color: var(--text);
-                       border: 1px solid var(--line); border-radius: 5px;
-                       padding: 0.3rem 0.5rem; }
-    button { border: 1px solid var(--line); border-radius: 5px; padding: 0.3rem 0.8rem;
-             cursor: pointer; background: var(--bg); color: var(--text); }
-    button.approve { border-color: var(--ok); color: var(--ok); }
-    button.reject { border-color: var(--bad); color: var(--bad); }
-    .empty { color: var(--muted); padding: 1.25rem; text-align: center;
-             border: 1px dashed var(--line); border-radius: 8px; }
+
+    /* --- chrome --- */
+    .topbar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--panel) 88%, transparent);
+              backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    .topbar-inner { max-width: 1240px; margin: 0 auto; padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+    .brand:hover { text-decoration: none; }
+    .brand-mark { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
+    nav.tabs { display: flex; gap: 2px; }
+    nav.tabs a { padding: 6px 12px; border-radius: 8px; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+    nav.tabs a:hover { background: var(--panel-2); color: var(--text); text-decoration: none; }
+    nav.tabs a.active { background: var(--accent-soft); color: var(--accent-text); }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .live { position: relative; display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--text-2); cursor: pointer; user-select: none; }
+    .live input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); }
+    .live input:checked ~ .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+    .live input:focus-visible ~ .dot { box-shadow: var(--ring); }
+    .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text-2); display: grid; place-items: center; cursor: pointer; }
+    .icon-btn:hover { background: var(--panel-2); color: var(--text); }
+    main { max-width: 1240px; margin: 0 auto; padding: 28px 20px 64px; display: grid; gap: 24px; }
+
+    /* --- building blocks --- */
+    h1 { font-size: 22px; letter-spacing: -.02em; line-height: 1.3; text-wrap: balance; }
+    h2 { font-size: 15px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+    .panel-pad { padding: 18px 20px; }
+    .panel > .table-wrap { border-radius: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .stat { padding: 14px 16px; display: grid; gap: 2px; border-left: 3px solid var(--line-2); color: var(--text); }
+    .stat .n { font: 600 24px/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+    .stat .k { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .stat .sub { font-size: 12.5px; color: var(--text-2); }
+    .stat.running { border-left-color: var(--info); } .stat.awaiting { border-left-color: var(--warn); }
+    .stat.ok { border-left-color: var(--ok); } .stat.bad { border-left-color: var(--bad); } .stat.cost { border-left-color: var(--accent); }
+    a.stat:hover { text-decoration: none; background: var(--panel-2); }
+
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
+            color: var(--idle); background: var(--idle-soft); }
+    .pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .pill.succeeded, .pill.approved, .pill.committed { color: var(--ok); background: var(--ok-soft); }
+    .pill.failed, .pill.rejected, .pill.expired, .pill.cancelled { color: var(--bad); background: var(--bad-soft); }
+    .pill.running, .pill.in_flight, .pill.retrying { color: var(--info); background: var(--info-soft); }
+    .pill.running::before, .pill.in_flight::before { animation: blink 1.2s infinite; }
+    .pill.awaiting_approval, .pill.pending { color: var(--warn); background: var(--warn-soft); }
+    @keyframes blink { 50% { opacity: .25; } }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 8px;
+           border: 1px solid var(--line-2); background: var(--panel); color: var(--text); font: 600 13.5px var(--sans); cursor: pointer; white-space: nowrap; }
+    .btn:hover { background: var(--panel-2); text-decoration: none; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+    .btn-primary:hover { background: var(--accent); filter: brightness(1.08); }
+    .btn-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+    .btn-ok:hover { background: var(--ok-soft); }
+    .btn-bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+    .btn-bad:hover { background: var(--bad-soft); }
+    .input { height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel); color: var(--text); font: 14px var(--sans); min-width: 0; width: 100%; }
+    .input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+    textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height: 1.5; }
+    label.field { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text-2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+    .chip:hover { text-decoration: none; border-color: var(--line-2); color: var(--text); }
+    .chip.active { background: var(--text); border-color: var(--text); color: var(--panel); }
+    .chip .num { opacity: .7; margin-left: 4px; font-size: 12px; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--panel-2); white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr[data-href] { cursor: pointer; }
+    tbody tr:hover { background: var(--panel-2); }
+    td.task { min-width: 240px; max-width: 520px; }
+    td.task a { color: var(--text); font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    td.nowrap { white-space: nowrap; }
+
+    .meter { height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; min-width: 60px; }
+    .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    .meter.warn > span { background: var(--warn); } .meter.bad > span { background: var(--bad); }
+    .meter-row { display: grid; gap: 4px; min-width: 90px; }
+
+    .empty { padding: 40px 20px; text-align: center; color: var(--muted); border: 1.5px dashed var(--line-2); border-radius: 12px; }
+    .empty strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+    .notice { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border-radius: 10px; background: var(--warn-soft); color: var(--text); font-weight: 500; }
+    .notice a { font-weight: 600; }
+    .notice.bad { background: var(--bad-soft); }
+    pre.json { font: 12.5px/1.55 var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow: auto; max-height: 260px; white-space: pre; }
+    details > summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 8px; }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+    details[open] > summary::before { transform: rotate(90deg); }
+
+    @media (max-width: 720px) {
+      .topbar-inner { height: auto; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+      nav.tabs { order: 3; width: 100%; overflow-x: auto; }
+      main { padding: 20px 16px 48px; }
+      .hide-sm { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    {% block style %}{% endblock %}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Agent Orchestrator</h1>
-    <nav style="display:flex; gap:1rem">
-      <a href="/ui">Runs</a>
-      <a href="/ui/approvals">Approvals</a>
-      <a href="/docs">API</a>
-      <a href="/metrics">Metrics</a>
-    </nav>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/ui">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+        </span>
+        Agent Orchestrator
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <a href="/ui" class="{{ 'active' if nav == 'runs' }}">Runs</a>
+        <a href="/ui/approvals" class="{{ 'active' if nav == 'approvals' }}">Approvals</a>
+        <a href="/docs">API docs</a>
+        <a href="/metrics">Metrics</a>
+      </nav>
+      <div class="topbar-right">
+        {% if live %}
+        <label class="live" title="Refresh this page every 3 seconds">
+          <input type="checkbox" id="live-toggle" checked>
+          <span class="dot" aria-hidden="true"></span>
+          <span>Live</span>
+        </label>
+        {% endif %}
+        <button type="button" class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+      </div>
+    </div>
   </header>
-  <main>{% block content %}{% endblock %}</main>
+
+  <main id="main">{% block content %}{% endblock %}</main>
+
+  <script>
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const root = document.documentElement;
+      const dark = root.dataset.theme
+        ? root.dataset.theme === 'dark'
+        : matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme = dark ? 'light' : 'dark';
+      try { localStorage.setItem('orch-theme', root.dataset.theme); } catch (e) {}
+    });
+
+    // Whole table rows open their run, not just the link text.
+    document.addEventListener('click', (e) => {
+      const row = e.target.closest('tr[data-href]');
+      if (row && !e.target.closest('a, button, form')) location.href = row.dataset.href;
+    });
+
+    // Live refresh without a full reload: re-fetch this page and swap <main> in
+    // place, so scroll position holds - and never while the operator is typing in
+    // a form, which is what the old meta-refresh used to wipe out.
+    (() => {
+      const toggle = document.getElementById('live-toggle');
+      if (!toggle) return;
+      try { toggle.checked = localStorage.getItem('orch-live') !== 'off'; } catch (e) {}
+      toggle.addEventListener('change', () => {
+        try { localStorage.setItem('orch-live', toggle.checked ? 'on' : 'off'); } catch (e) {}
+      });
+      const timer = setInterval(async () => {
+        if (!toggle.checked || document.hidden) return;
+        const active = document.activeElement;
+        if (active && active.closest('#main form')) return;
+        const main = document.getElementById('main');
+        if ([...main.querySelectorAll('input, textarea')].some((f) => f.type !== 'hidden' && f.value && f.defaultValue !== f.value)) return;
+        try {
+          const res = await fetch(location.href, { headers: { 'X-Live-Refresh': '1' } });
+          if (!res.ok) return;
+          const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+          const fresh = doc.getElementById('main');
+          if (!fresh) return;
+          const open = [...main.querySelectorAll('details[id]')].filter((d) => d.open).map((d) => d.id);
+          main.replaceChildren(...[...fresh.childNodes].map((n) => document.importNode(n, true)));
+          open.forEach((id) => { const d = document.getElementById(id); if (d) d.open = true; });
+          // A run that has finished stops refreshing itself.
+          if (!doc.getElementById('live-toggle')) { clearInterval(timer); toggle.closest('.live').remove(); }
+        } catch (e) { /* offline for a moment; try again next tick */ }
+      }, 3000);
+    })();
+  </script>
 </body>
 </html>

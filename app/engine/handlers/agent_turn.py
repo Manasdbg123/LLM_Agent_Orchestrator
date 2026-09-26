@@ -19,6 +19,7 @@ the absence of join logic, partial-fan-out recovery, and intra-run races.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any
 
@@ -245,7 +246,7 @@ async def _check_consecutive_invalid_tool_calls(ctx: StepContext) -> None:
     """
     cap = settings.max_consecutive_invalid_tool_calls
     async with session_scope() as session:
-        recent = (
+        recent: Sequence[dict[str, Any] | None] = (
             (
                 await session.execute(
                     sa.select(Step.output)
@@ -272,7 +273,7 @@ async def _check_consecutive_invalid_tool_calls(ctx: StepContext) -> None:
 
 async def _resolved_tool_use_ids(ctx: StepContext) -> set[str]:
     async with session_scope() as session:
-        rows = (
+        rows: Sequence[dict[str, Any] | None] = (
             (
                 await session.execute(
                     sa.select(Step.output).where(
